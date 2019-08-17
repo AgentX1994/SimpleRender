@@ -33,14 +33,28 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     }
 }
 
-int main()
+void print_usage(std::string name)
 {
+    fmt::print("Usage: {} [mesh]", name);
+    fmt::print("\tIf no mesh is given, test.obj is used");
+}
+
+int main(int argc, char** argv)
+{
+    std::string mesh_file = "test.obj";
+    if (argc == 2) {
+        mesh_file = argv[1];
+    } else if (argc > 2) {
+        print_usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
     Mesh my_mesh;
-    my_mesh.loadObj("test.obj");
+    my_mesh.loadObj(mesh_file);
 
     if (!glfwInit()) {
         spdlog::error("Could not load glfw!");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     std::vector<Vertex> vertices = my_mesh.getVertices();
@@ -218,7 +232,22 @@ int main()
     glClearColor(0.0, 0.0, 0.0, 1.0);
 
     glm::mat4 m, p, mvp;
-    glm::mat4 view = glm::lookAt(glm::vec3(40.f, 30.f, 30.f), glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f));
+    // Position the camera at (40, 30, 30) looking towards (0, 0, 0), with (0, 1, 0) up vector
+    glm::mat4 view = glm::lookAt(
+        glm::vec3(40.f, 30.f, 30.f), // Camera position
+        glm::vec3(0.f), // looking at
+        glm::vec3(0.f, 1.f, 0.f) // Up vector
+    );
+
+    // Determine best scaling factor for this model
+    float max_len = 0.f;
+    for (const auto& v : vertices) {
+        auto len = glm::length(v.pos);
+        if (len > max_len) {
+            max_len = len;
+        }
+    }
+    float scale = 10.f / max_len;
 
     glEnable(GL_DEPTH_TEST);
 
@@ -238,7 +267,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         m = glm::mat4(1.0f);
-        m = glm::scale(m, glm::vec3(0.1f));
+        m = glm::scale(m, glm::vec3(scale));
         m = glm::rotate(m, time, glm::vec3(0.f, 1.f, 0.0f));
 
         p = glm::perspective(glm::radians(45.f), ratio, .1f, 100.f);

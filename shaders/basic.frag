@@ -4,5 +4,9 @@ varying vec3 normal;
 
 void main()
 {
-    gl_FragColor = vec4(normal, 1.0);
+    if (length(normal) > 0.01) {
+        gl_FragColor = vec4(normal, 1.0);
+    } else {
+        gl_FragColor = vec4(1.0);
+    }
 }
