@@ -18,6 +18,7 @@ add_executable(OpenGlTest
     src/main.cpp
     src/debug_callback.cpp
     src/mesh.cpp
+    src/utils.cpp
 )
 
 target_link_libraries(OpenGlTest
@@ -26,3 +27,11 @@ target_link_libraries(OpenGlTest
     glm
     spdlog::spdlog
 )
+
+add_custom_command(TARGET OpenGlTest POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                   ${CMAKE_SOURCE_DIR}/shaders $<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders)
+
+add_custom_command(TARGET OpenGlTest POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                   ${CMAKE_SOURCE_DIR}/test.obj $<TARGET_FILE_DIR:${PROJECT_NAME}>/)

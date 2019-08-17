@@ -1,4 +1,5 @@
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -16,6 +17,7 @@
 
 #include "debug_callback.h"
 #include "mesh.h"
+#include "utils.h"
 
 void error_callback(int error, const char* des)
 {
@@ -30,34 +32,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
 }
-
-static const char* vertex_shader_text = R"shader(
-#version 110
-uniform mat4 MVP;
-attribute vec3 vPos;
-attribute vec2 vUv;
-attribute vec3 vNormal;
-varying vec2 uv;
-varying vec3 normal;
-
-void main()
-{
-    gl_Position = MVP * vec4(vPos, 1.0);
-    uv = vUv;
-    normal = vNormal;
-};
-)shader";
-
-static const char* fragment_shader_text = R"shader(
-#version 110
-varying vec2 uv;
-varying vec3 normal;
-
-void main()
-{
-    gl_FragColor = vec4(normal, 1.0);
-};
-)shader";
 
 int main()
 {
@@ -95,9 +69,30 @@ int main()
     GLuint vertex_buffer, index_buffer, vertex_shader, fragment_shader, program;
     GLint mvp_location, vpos_location, vuv_location, vnorm_location;
 
+    spdlog::info("read v shader");
+    auto vertex_shader_opt = read_file("shaders/basic.vert");
+    if (!vertex_shader_opt) {
+        spdlog::error("Could not read vertex shader!");
+        glfwTerminate();
+        return EXIT_FAILURE;
+    }
+
+    const std::string vertex_shader_str = *vertex_shader_opt;
+
+    spdlog::info("read f shader");
+    auto fragment_shader_opt = read_file("shaders/basic.frag");
+    if (!fragment_shader_opt) {
+        spdlog::error("Could not read frag shader!");
+        glfwTerminate();
+        return EXIT_FAILURE;
+    }
+
+    const std::string fragment_shader_str = *fragment_shader_opt;
+
     spdlog::info("gen v shader");
     // Create vertex shader
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    auto vertex_shader_text = vertex_shader_str.c_str();
     glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
     glCompileShader(vertex_shader);
 
@@ -129,6 +124,7 @@ int main()
     spdlog::info("gen f shader");
     // Create fragment shader
     fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    auto fragment_shader_text = fragment_shader_str.c_str();
     glShaderSource(fragment_shader, 1, &fragment_shader_text, NULL);
     glCompileShader(fragment_shader);
 
