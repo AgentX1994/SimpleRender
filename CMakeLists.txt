@@ -8,6 +8,7 @@ find_package(PkgConfig REQUIRED)
 find_package(glfw3 3.3 REQUIRED)
 find_package(glm REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(fmt REQUIRED)
 
 pkg_check_modules(LibEpoxy REQUIRED IMPORTED_TARGET epoxy)
 
@@ -26,6 +27,7 @@ target_link_libraries(OpenGlTest
     glfw
     glm
     spdlog::spdlog
+    fmt::fmt
 )
 
 add_custom_command(TARGET OpenGlTest POST_BUILD
