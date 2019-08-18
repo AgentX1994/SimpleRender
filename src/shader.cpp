@@ -2,6 +2,9 @@
 
 #include <string>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <spdlog/spdlog.h>
 
 #include "utils.h"
@@ -45,6 +48,12 @@ ShaderProgram::ShaderProgram(
     }
 
     glLinkProgram(shader_program_id);
+}
+
+ShaderProgram::~ShaderProgram()
+{
+    glDeleteShader(shader_program_id);
+    shader_program_id = 0;
 }
 
 GLuint ShaderProgram::create_shader(std::string file, GLenum type)
@@ -92,9 +101,48 @@ GLuint ShaderProgram::create_shader(std::string file, GLenum type)
     return shader;
 }
 
-GLint ShaderProgram::get_uniform_location(const std::string& uniform)
+bool ShaderProgram::set_uniform_int(const std::string& uniform, int value)
 {
-    return glGetUniformLocation(shader_program_id, uniform.c_str());
+    auto loc = glGetUniformLocation(shader_program_id, uniform.c_str());
+    if (loc == -1) {
+        //spdlog::info("ShaderProgram {}, {} has no uniform {}", vertex_file, fragment_file, uniform);
+        return false;
+    }
+    glUniform1iv(loc, 1, &value);
+    return true;
+}
+
+bool ShaderProgram::set_uniform_float(const std::string& uniform, float value)
+{
+    auto loc = glGetUniformLocation(shader_program_id, uniform.c_str());
+    if (loc == -1) {
+        //spdlog::info("ShaderProgram {}, {} has no uniform {}", vertex_file, fragment_file, uniform);
+        return false;
+    }
+    glUniform1fv(loc, 1, &value);
+    return true;
+}
+
+bool ShaderProgram::set_uniform_vec3(const std::string& uniform, const glm::vec3& value)
+{
+    auto loc = glGetUniformLocation(shader_program_id, uniform.c_str());
+    if (loc == -1) {
+        //spdlog::info("ShaderProgram {}, {} has no uniform {}", vertex_file, fragment_file, uniform);
+        return false;
+    }
+    glUniform3fv(loc, 1, glm::value_ptr(value));
+    return true;
+}
+
+bool ShaderProgram::set_uniform_mat4(const std::string& uniform, const glm::mat4& value)
+{
+    auto loc = glGetUniformLocation(shader_program_id, uniform.c_str());
+    if (loc == -1) {
+        //spdlog::info("ShaderProgram {}, {} has no uniform {}", vertex_file, fragment_file, uniform);
+        return false;
+    }
+    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(value));
+    return true;
 }
 
 GLint ShaderProgram::get_attribute_location(const std::string& attribute)
