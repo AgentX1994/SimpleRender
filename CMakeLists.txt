@@ -20,6 +20,7 @@ add_executable(OpenGlTest
     src/debug_callback.cpp
     src/mesh.cpp
     src/utils.cpp
+    src/shader.cpp
 )
 
 target_link_libraries(OpenGlTest

@@ -17,6 +17,7 @@
 
 #include "debug_callback.h"
 #include "mesh.h"
+#include "shader.h"
 #include "utils.h"
 
 void error_callback(int error, const char* des)
@@ -82,9 +83,6 @@ int main(int argc, char** argv)
     GLuint VAO; // Vertex Array object
     GLuint vertex_buffer; // Vertex Buffer Object
     GLuint index_buffer; // Element Buffer object
-    GLuint vertex_shader; // vertex shader object
-    GLuint fragment_shader; // fragment shader object
-    GLuint program; // shader program object
 
     // uniform locations
     GLint mvp_location; // location of MVP uniform
@@ -107,101 +105,7 @@ int main(int argc, char** argv)
     GLint vuv_location; // location of vUv attribute
     GLint vnorm_location; // location of vNorm attribute
 
-    spdlog::info("read v shader");
-    auto vertex_shader_opt = read_file("shaders/basic.vert");
-    if (!vertex_shader_opt) {
-        spdlog::error("Could not read vertex shader!");
-        glfwTerminate();
-        return EXIT_FAILURE;
-    }
-
-    const std::string vertex_shader_str = *vertex_shader_opt;
-
-    spdlog::info("read f shader");
-    auto fragment_shader_opt = read_file("shaders/basic.frag");
-    if (!fragment_shader_opt) {
-        spdlog::error("Could not read frag shader!");
-        glfwTerminate();
-        return EXIT_FAILURE;
-    }
-
-    const std::string fragment_shader_str = *fragment_shader_opt;
-
-    spdlog::info("gen v shader");
-    // Create vertex shader
-    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    auto vertex_shader_text = vertex_shader_str.c_str();
-    glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
-    glCompileShader(vertex_shader);
-
-    spdlog::info("Error check v shader compilation");
-
-    {
-        GLint isCompiled = 0;
-        glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &isCompiled);
-        if (isCompiled == GL_FALSE) {
-            GLint maxLength = 0;
-            glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &maxLength);
-
-            // The maxLength includes the NULL character
-            std::string errorLog(maxLength, '\0');
-            glGetShaderInfoLog(vertex_shader, maxLength, &maxLength, errorLog.data());
-
-            // Provide the infolog in whatever manor you deem best.
-            // Exit with failure.
-            glDeleteShader(vertex_shader); // Don't leak the shader.
-
-            spdlog::error("Vertex Shader compilation failed: \"{}\"", errorLog);
-
-            glfwDestroyWindow(window);
-            glfwTerminate();
-            return EXIT_FAILURE;
-        }
-    }
-
-    spdlog::info("gen f shader");
-    // Create fragment shader
-    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    auto fragment_shader_text = fragment_shader_str.c_str();
-    glShaderSource(fragment_shader, 1, &fragment_shader_text, NULL);
-    glCompileShader(fragment_shader);
-
-    spdlog::info("Error check f shader compilation");
-
-    {
-        GLint isCompiled = 0;
-        glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &isCompiled);
-        if (isCompiled == GL_FALSE) {
-            GLint maxLength = 0;
-            glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &maxLength);
-
-            // The maxLength includes the NULL character
-            std::string errorLog(maxLength, '\0');
-            glGetShaderInfoLog(fragment_shader, maxLength, &maxLength, errorLog.data());
-
-            // Provide the infolog in whatever manor you deem best.
-            // Exit with failure.
-            glDeleteShader(vertex_shader); // Don't leak the shader.
-            glDeleteShader(fragment_shader); // Don't leak the shader.
-
-            spdlog::error("Fragment Shader compilation failed: \"{}\"", errorLog);
-
-            glfwDestroyWindow(window);
-            glfwTerminate();
-            return EXIT_FAILURE;
-        }
-    }
-
-    spdlog::info("gen shader program");
-    // Create shader program
-    program = glCreateProgram();
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    glLinkProgram(program);
-
-    spdlog::info("del shader program");
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
+    ShaderProgram basic_shader("shaders/basic.vert", "shaders/basic.frag");
 
     spdlog::info("gen buffers");
     // Generate OpenGL buffers
@@ -213,63 +117,63 @@ int main(int argc, char** argv)
     glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
 
     spdlog::info("get uniform locs");
-    mvp_location = glGetUniformLocation(program, "MVP");
+    mvp_location = basic_shader.get_uniform_location("MVP");
     if (mvp_location == -1) {
         spdlog::warn("Could not get location of MVP");
     }
 
-    inv_trans_model_view_location = glGetUniformLocation(program, "inv_trans_model_view");
+    inv_trans_model_view_location = basic_shader.get_uniform_location("inv_trans_model_view");
     if (inv_trans_model_view_location == -1) {
         spdlog::warn("Could not get location of inv_trans_model_view");
     }
 
-    model_view_location = glGetUniformLocation(program, "model_view");
+    model_view_location = basic_shader.get_uniform_location("model_view");
     if (model_view_location == -1) {
         spdlog::warn("Could not get location of model_view");
     }
 
-    light_position_location = glGetUniformLocation(program, "light_position");
+    light_position_location = basic_shader.get_uniform_location("light_position");
     if (light_position_location == -1) {
         spdlog::warn("Could not get location of light position");
     }
 
-    ambient_coefficient_location = glGetUniformLocation(program, "ambient_coefficient");
+    ambient_coefficient_location = basic_shader.get_uniform_location("ambient_coefficient");
     if (ambient_coefficient_location == -1) {
         spdlog::warn("Could not get location of ambient coefficient");
     }
 
-    diffuse_coefficient_location = glGetUniformLocation(program, "diffuse_coefficient");
+    diffuse_coefficient_location = basic_shader.get_uniform_location("diffuse_coefficient");
     if (diffuse_coefficient_location == -1) {
         spdlog::warn("Could not get location of diffuse coefficient");
     }
 
-    specular_coefficient_location = glGetUniformLocation(program, "specular_coefficient");
+    specular_coefficient_location = basic_shader.get_uniform_location("specular_coefficient");
     if (specular_coefficient_location == -1) {
         spdlog::warn("Could not get location of specular coefficient");
     }
 
-    shininess_location = glGetUniformLocation(program, "shininess");
+    shininess_location = basic_shader.get_uniform_location("shininess");
     if (shininess_location == -1) {
         spdlog::warn("Could not get location of shininess");
     }
 
-    ambient_color_location = glGetUniformLocation(program, "ambient_color");
+    ambient_color_location = basic_shader.get_uniform_location("ambient_color");
     if (ambient_color_location == -1) {
         spdlog::warn("Could not get location of ambient color");
     }
 
-    diffuse_color_location = glGetUniformLocation(program, "diffuse_color");
+    diffuse_color_location = basic_shader.get_uniform_location("diffuse_color");
     if (diffuse_color_location == -1) {
         spdlog::warn("Could not get location of diffuse color");
     }
 
-    specular_color_location = glGetUniformLocation(program, "specular_color");
+    specular_color_location = basic_shader.get_uniform_location("specular_color");
     if (specular_color_location == -1) {
         spdlog::warn("Could not get location of specular color");
     }
 
     spdlog::info("get attribute locs");
-    vpos_location = glGetAttribLocation(program, "vPos");
+    vpos_location = basic_shader.get_attribute_location("vPos");
     if (vpos_location == -1) {
         spdlog::warn("Could not get location of vPos");
     } else {
@@ -279,7 +183,7 @@ int main(int argc, char** argv)
         glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
     }
 
-    vuv_location = glGetAttribLocation(program, "vUv");
+    vuv_location = basic_shader.get_attribute_location("vUv");
     if (vuv_location == -1) {
         spdlog::warn("Could not get location of vUv");
     } else {
@@ -289,7 +193,7 @@ int main(int argc, char** argv)
         glVertexAttribPointer(vuv_location, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(float) * 3));
     }
 
-    vnorm_location = glGetAttribLocation(program, "vNormal");
+    vnorm_location = basic_shader.get_attribute_location("vNormal");
     if (vnorm_location == -1) {
         spdlog::warn("Could not get location of vNormal");
     } else {
@@ -366,7 +270,7 @@ int main(int argc, char** argv)
         mvp = p * model_view;
 
         glm::mat4 inv_trans_model_view = glm::inverse(glm::transpose(model_view));
-        glUseProgram(program);
+        basic_shader.use();
 
         // Transformations
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*)&mvp[0][0]);
