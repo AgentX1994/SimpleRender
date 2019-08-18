@@ -162,7 +162,7 @@ int main(int argc, char** argv)
         GLuint debug_vertex_buffer;
         glGenBuffers(1, &debug_vertex_buffer);
         glBindBuffer(GL_ARRAY_BUFFER, debug_vertex_buffer);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * debug_vertices.size(), debug_vertices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * debug_vertices.size(), debug_vertices.data(), GL_STATIC_DRAW);
 
         vpos_location = debug_shader.get_attribute_location("vPos");
         if (vpos_location == -1) {
@@ -232,50 +232,53 @@ int main(int argc, char** argv)
 
             glm::mat4 inv_trans_model_view = glm::inverse(glm::transpose(model_view));
 
-            ShaderProgram& shader = (debug_mode) ? debug_shader : basic_shader;
-            if (debug_mode) {
-                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            } else {
-                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            }
-            shader.use();
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            basic_shader.use();
 
             // Transformations
-            shader.set_uniform_mat4("MVP", mvp);
-            shader.set_uniform_mat4("model_view", model_view);
-            shader.set_uniform_mat4("inv_trans_model_view", inv_trans_model_view);
+            basic_shader.set_uniform_mat4("MVP", mvp);
+            basic_shader.set_uniform_mat4("model_view", model_view);
+            basic_shader.set_uniform_mat4("inv_trans_model_view", inv_trans_model_view);
 
             // light position
-            shader.set_uniform_vec3("light_position", light_position);
+            basic_shader.set_uniform_vec3("light_position", light_position);
 
             // coefficients
-            shader.set_uniform_float("ambient_coefficient", ambient_coefficient);
-            shader.set_uniform_float("diffuse_coefficient", diffuse_coefficient);
-            shader.set_uniform_float("specular_coefficient", specular_coefficient);
+            basic_shader.set_uniform_float("ambient_coefficient", ambient_coefficient);
+            basic_shader.set_uniform_float("diffuse_coefficient", diffuse_coefficient);
+            basic_shader.set_uniform_float("specular_coefficient", specular_coefficient);
 
-            shader.set_uniform_float("shininess", shininess);
+            basic_shader.set_uniform_float("shininess", shininess);
 
             // colors
-            shader.set_uniform_vec3("ambient_color", ambient_color);
-            shader.set_uniform_vec3("diffuse_color", diffuse_color);
-            shader.set_uniform_vec3("specular_color", specular_color);
-
-            // mode
-            shader.set_uniform_int("mode", 0);
+            basic_shader.set_uniform_vec3("ambient_color", ambient_color);
+            basic_shader.set_uniform_vec3("diffuse_color", diffuse_color);
+            basic_shader.set_uniform_vec3("specular_color", specular_color);
 
             glBindVertexArray(VAO);
             glDrawElements(GL_TRIANGLES, indices.size() * 3, GL_UNSIGNED_INT, nullptr);
 
+            basic_shader.unuse();
             // Also draw normals
             if (debug_mode) {
-                shader.set_uniform_int("mode", 1);
+
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                debug_shader.use();
+                // Transformations
+                debug_shader.set_uniform_mat4("MVP", mvp);
+
+                // mode
+                debug_shader.set_uniform_int("mode", 0);
+
+                glDrawElements(GL_TRIANGLES, indices.size() * 3, GL_UNSIGNED_INT, nullptr);
+
+                debug_shader.set_uniform_int("mode", 1);
                 glBindVertexArray(debug_VAO);
                 glDrawArrays(GL_LINES, 0, debug_vertices.size());
+                debug_shader.unuse();
             }
 
             glBindVertexArray(0);
-
-            shader.unuse();
 
             glfwSwapBuffers(window);
             glfwPollEvents();
