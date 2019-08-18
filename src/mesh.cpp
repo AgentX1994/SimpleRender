@@ -79,11 +79,11 @@ bool Mesh::loadObj(const std::string& filename)
                 Vertex v;
                 v.pos = input_vertices[vertex_index - 1];
                 spdlog::info("\t\t\tvertex = {{{},{},{}}}", v.pos.x, v.pos.y, v.pos.z);
-                if (input_uvs.size() > uv_index) {
+                if (input_uvs.size() > (uv_index - 1)) {
                     v.uv = input_uvs[uv_index - 1];
                     spdlog::info("\t\t\tuv = {{{},{}}}", v.uv.x, v.uv.y);
                 }
-                if (input_normals.size() > normal_index) {
+                if (input_normals.size() > (normal_index - 1)) {
                     v.normal = input_normals[normal_index - 1];
                     spdlog::info("\t\t\tnormal = {{{},{},{}}}", v.normal.x, v.normal.y, v.normal.z);
                 }

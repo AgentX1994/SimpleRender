@@ -153,10 +153,12 @@ int main(int argc, char** argv)
         constexpr float NORMAL_LEN = 30.0f;
         std::vector<glm::vec3> debug_vertices;
         for (auto& v : vertices) {
+            spdlog::info("vertex: {{ pos {{{: >+#8.3f},{: >+#8.3f},{: >+#8.3f}}}, uv {{{: >+#8.3f},{: >+#8.3f}}}, normal {{{: >+#8.3f},{: >+#8.3f},{: >+#8.3f}}} }}", v.pos.x, v.pos.y, v.pos.z, v.uv.s, v.uv.t, v.normal.x, v.normal.y, v.normal.z);
             auto normal = v.normal;
             auto pos = v.pos;
             debug_vertices.push_back(pos);
             debug_vertices.push_back(pos + normal * NORMAL_LEN);
+            break;
         }
 
         GLuint debug_vertex_buffer;
