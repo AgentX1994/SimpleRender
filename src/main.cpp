@@ -79,9 +79,33 @@ int main(int argc, char** argv)
     spdlog::info("OpenGL Version: {}", epoxy_gl_version());
     glDebugMessageCallback(debug_callback, nullptr);
 
-    GLuint VAO;
-    GLuint vertex_buffer, index_buffer, vertex_shader, fragment_shader, program;
-    GLint mvp_location, vpos_location, vuv_location, vnorm_location;
+    GLuint VAO; // Vertex Array object
+    GLuint vertex_buffer; // Vertex Buffer Object
+    GLuint index_buffer; // Element Buffer object
+    GLuint vertex_shader; // vertex shader object
+    GLuint fragment_shader; // fragment shader object
+    GLuint program; // shader program object
+
+    // uniform locations
+    GLint mvp_location; // location of MVP uniform
+    GLint inv_trans_model_view_location; // location of inv_trans_model_view uniform
+    GLint model_view_location; // location of model_view uniform
+    GLint light_position_location; // location of light position uniform
+
+    GLint ambient_coefficient_location; // location of ambient coefficient uniform
+    GLint diffuse_coefficient_location; // location of diffuse coefficient uniform
+    GLint specular_coefficient_location; // location of specular coefficient uniform
+
+    GLint shininess_location; // location of shininess uniform
+
+    GLint ambient_color_location; // location of ambient color uniform
+    GLint diffuse_color_location; // location of diffuse color uniform
+    GLint specular_color_location; // location of specular color uniform
+
+    // vertex attribute locations
+    GLint vpos_location; // location of vPos attribute
+    GLint vuv_location; // location of vUv attribute
+    GLint vnorm_location; // location of vNorm attribute
 
     spdlog::info("read v shader");
     auto vertex_shader_opt = read_file("shaders/basic.vert");
@@ -194,6 +218,57 @@ int main(int argc, char** argv)
         spdlog::warn("Could not get location of MVP");
     }
 
+    inv_trans_model_view_location = glGetUniformLocation(program, "inv_trans_model_view");
+    if (inv_trans_model_view_location == -1) {
+        spdlog::warn("Could not get location of inv_trans_model_view");
+    }
+
+    model_view_location = glGetUniformLocation(program, "model_view");
+    if (model_view_location == -1) {
+        spdlog::warn("Could not get location of model_view");
+    }
+
+    light_position_location = glGetUniformLocation(program, "light_position");
+    if (light_position_location == -1) {
+        spdlog::warn("Could not get location of light position");
+    }
+
+    ambient_coefficient_location = glGetUniformLocation(program, "ambient_coefficient");
+    if (ambient_coefficient_location == -1) {
+        spdlog::warn("Could not get location of ambient coefficient");
+    }
+
+    diffuse_coefficient_location = glGetUniformLocation(program, "diffuse_coefficient");
+    if (diffuse_coefficient_location == -1) {
+        spdlog::warn("Could not get location of diffuse coefficient");
+    }
+
+    specular_coefficient_location = glGetUniformLocation(program, "specular_coefficient");
+    if (specular_coefficient_location == -1) {
+        spdlog::warn("Could not get location of specular coefficient");
+    }
+
+    shininess_location = glGetUniformLocation(program, "shininess");
+    if (shininess_location == -1) {
+        spdlog::warn("Could not get location of shininess");
+    }
+
+    ambient_color_location = glGetUniformLocation(program, "ambient_color");
+    if (ambient_color_location == -1) {
+        spdlog::warn("Could not get location of ambient color");
+    }
+
+    diffuse_color_location = glGetUniformLocation(program, "diffuse_color");
+    if (diffuse_color_location == -1) {
+        spdlog::warn("Could not get location of diffuse color");
+    }
+
+    specular_color_location = glGetUniformLocation(program, "specular_color");
+    if (specular_color_location == -1) {
+        spdlog::warn("Could not get location of specular color");
+    }
+
+    spdlog::info("get attribute locs");
     vpos_location = glGetAttribLocation(program, "vPos");
     if (vpos_location == -1) {
         spdlog::warn("Could not get location of vPos");
@@ -239,6 +314,21 @@ int main(int argc, char** argv)
         glm::vec3(0.f, 1.f, 0.f) // Up vector
     );
 
+    // light pos is 20 units higher than camera
+    glm::vec3 light_position = glm::vec3(40.f, 40.f, 30.f);
+
+    // coefficients
+    float ambient_coefficient = 1.0f;
+    float diffuse_coefficient = 1.0f;
+    float specular_coefficient = 1.0f;
+
+    float shininess = 80.f; // lower = more shiny for some reason
+
+    // colors
+    glm::vec3 ambient_color = glm::vec3(0.1f, 0.1f, 0.2f);
+    glm::vec3 diffuse_color = glm::vec3(0.5f, 0.5f, 0.9f);
+    glm::vec3 specular_color = glm::vec3(1.f, 1.f, 1.f);
+
     // Determine best scaling factor for this model
     float max_len = 0.f;
     for (const auto& v : vertices) {
@@ -272,10 +362,32 @@ int main(int argc, char** argv)
 
         p = glm::perspective(glm::radians(45.f), ratio, .1f, 100.f);
 
-        mvp = p * view * m;
+        glm::mat4 model_view = view * m;
+        mvp = p * model_view;
 
+        glm::mat4 inv_trans_model_view = glm::inverse(glm::transpose(model_view));
         glUseProgram(program);
+
+        // Transformations
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*)&mvp[0][0]);
+        glUniformMatrix4fv(model_view_location, 1, GL_FALSE, (const GLfloat*)&model_view[0][0]);
+        glUniformMatrix4fv(inv_trans_model_view_location, 1, GL_FALSE, (const GLfloat*)&inv_trans_model_view[0][0]);
+
+        // light position
+        glUniform3fv(light_position_location, 1, (const GLfloat*)&light_position[0]);
+
+        // coefficients
+        glUniform1fv(ambient_coefficient_location, 1, (const GLfloat*)&ambient_coefficient);
+        glUniform1fv(diffuse_coefficient_location, 1, (const GLfloat*)&diffuse_coefficient);
+        glUniform1fv(specular_coefficient_location, 1, (const GLfloat*)&specular_coefficient);
+
+        glUniform1fv(shininess_location, 1, (const GLfloat*)&shininess);
+
+        // colors
+        glUniform3fv(ambient_color_location, 1, (const GLfloat*)&ambient_color[0]);
+        glUniform3fv(diffuse_color_location, 1, (const GLfloat*)&diffuse_color[0]);
+        glUniform3fv(specular_color_location, 1, (const GLfloat*)&specular_color[0]);
+
         glDrawElements(GL_TRIANGLES, indices.size() * 3, GL_UNSIGNED_INT, nullptr);
 
         glfwSwapBuffers(window);

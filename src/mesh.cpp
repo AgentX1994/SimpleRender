@@ -56,20 +56,20 @@ bool Mesh::loadObj(const std::string& filename)
                 size_t vertex_index, uv_index, normal_index;
                 stream >> vertex_index;
 
+                uv_index = vertex_index;
                 if (stream.peek() == '/') {
                     char slash;
                     stream >> slash;
-                    stream >> uv_index;
-                } else {
-                    uv_index = vertex_index;
+                    if (stream.peek() != '/') {
+                        stream >> uv_index;
+                    }
                 }
 
+                normal_index = vertex_index;
                 if (stream.peek() == '/') {
                     char slash;
                     stream >> slash;
                     stream >> normal_index;
-                } else {
-                    normal_index = vertex_index;
                 }
 
                 Vertex v;
@@ -101,5 +101,6 @@ bool Mesh::loadObj(const std::string& filename)
         }
     }
 
+    spdlog::info("{} loaded, model name = \"{}\", {} vertices, {} uvs, {} normals, {} faces", filename, model_name, input_vertices.size(), input_uvs.size(), input_normals.size(), indices.size());
     return true;
 }
