@@ -156,9 +156,10 @@ int main(int argc, char** argv)
             spdlog::info("vertex: {{ pos {{{: >+#8.3f},{: >+#8.3f},{: >+#8.3f}}}, uv {{{: >+#8.3f},{: >+#8.3f}}}, normal {{{: >+#8.3f},{: >+#8.3f},{: >+#8.3f}}} }}", v.pos.x, v.pos.y, v.pos.z, v.uv.s, v.uv.t, v.normal.x, v.normal.y, v.normal.z);
             auto normal = v.normal;
             auto pos = v.pos;
+            auto end_pos = pos + normal * NORMAL_LEN;
+            spdlog::info("\tResulting normal line: ({: >+#8.3f},{: >+#8.3f},{: >+#8.3f}) -> ({: >+#8.3f},{: >+#8.3f},{: >+#8.3f})", pos.x, pos.y, pos.z, end_pos.x, end_pos.y, end_pos.z);
             debug_vertices.push_back(pos);
-            debug_vertices.push_back(pos + normal * NORMAL_LEN);
-            break;
+            debug_vertices.push_back(end_pos);
         }
 
         GLuint debug_vertex_buffer;
@@ -210,6 +211,7 @@ int main(int argc, char** argv)
             }
         }
         float scale = 10.f / max_len;
+        spdlog::info("scaling factor: {}", scale);
 
         glEnable(GL_DEPTH_TEST);
 
