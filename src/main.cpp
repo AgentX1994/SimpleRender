@@ -11,6 +11,8 @@
 #include <glm/gtx/string_cast.hpp>
 #include <glm/mat4x4.hpp>
 
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include <spdlog/async.h>
@@ -41,19 +43,65 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 void print_usage(std::string name)
 {
-    fmt::print("Usage: {} [mesh]", name);
+    fmt::print("Usage: {} [-v[v...]] [mesh]", name);
+    fmt::print("\tmultiple v's can be used in -v to increase verbosity, e.g. -vvv");
     fmt::print("\tIf no mesh is given, test.obj is used");
 }
 
 int main(int argc, char** argv)
 {
-    spdlog::set_level(spdlog::level::debug);
     std::string mesh_file = "test.obj";
-    if (argc == 2) {
-        mesh_file = argv[1];
-    } else if (argc > 2) {
-        print_usage(argv[0]);
-        return EXIT_FAILURE;
+    bool mesh_file_given = false;
+    int verbosity = 0;
+    for (int i = 1; i < argc; ++i) {
+        if (argv[i][0] == '-') {
+            std::string vs(argv[i] + 1);
+            for (auto c : vs) {
+                if (c == 'v') {
+                    verbosity++;
+                } else {
+                    print_usage(argv[0]);
+                    return EXIT_FAILURE;
+                }
+            }
+        } else {
+            if (mesh_file_given) {
+                print_usage(argv[0]);
+                return EXIT_FAILURE;
+            }
+            mesh_file = argv[i];
+            mesh_file_given = true;
+        }
+    }
+
+    spdlog::level::level_enum level;
+    if (verbosity == 0) {
+        level = spdlog::level::err;
+    } else if (verbosity == 1) {
+        level = spdlog::level::warn;
+    } else if (verbosity == 2) {
+        level = spdlog::level::info;
+    } else if (verbosity == 3) {
+        level = spdlog::level::debug;
+    } else {
+        level = spdlog::level::trace;
+    }
+
+    // set up logger
+    {
+        spdlog::init_thread_pool(8192, 1);
+        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+        console_sink->set_level(level);
+
+        auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("simple_render.txt", true);
+        file_sink->set_level(level);
+
+        std::vector<spdlog::sink_ptr> sinks { console_sink, file_sink };
+
+        auto logger = std::make_shared<spdlog::async_logger>("simple_render", sinks.begin(), sinks.end(), spdlog::thread_pool(), spdlog::async_overflow_policy::block);
+        spdlog::register_logger(logger);
+
+        spdlog::set_default_logger(logger);
     }
 
     Mesh my_mesh;
@@ -100,7 +148,7 @@ int main(int argc, char** argv)
         ShaderProgram basic_shader("shaders/basic.vert", "shaders/basic.frag");
         ShaderProgram debug_shader("shaders/debug.vert", "shaders/debug.frag");
 
-        spdlog::info("gen buffers");
+        spdlog::trace("gen buffers");
         // Generate OpenGL buffers
         glGenVertexArrays(1, &VAO);
         glBindVertexArray(VAO);
@@ -109,14 +157,14 @@ int main(int argc, char** argv)
         glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
         glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
 
-        spdlog::info("get attribute locs");
+        spdlog::trace("get attribute locs");
         vpos_location = basic_shader.get_attribute_location("vPos");
         if (vpos_location == -1) {
             spdlog::warn("Could not get location of vPos");
         } else {
-            spdlog::info("add vpos");
+            spdlog::trace("add vpos");
             glEnableVertexAttribArray(vpos_location);
-            spdlog::info("set vpos data");
+            spdlog::trace("set vpos data");
             glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
         }
 
@@ -124,9 +172,9 @@ int main(int argc, char** argv)
         if (vuv_location == -1) {
             spdlog::warn("Could not get location of vUv");
         } else {
-            spdlog::info("add vuv");
+            spdlog::trace("add vuv");
             glEnableVertexAttribArray(vuv_location);
-            spdlog::info("set vuv data");
+            spdlog::trace("set vuv data");
             glVertexAttribPointer(vuv_location, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(float) * 3));
         }
 
@@ -134,13 +182,13 @@ int main(int argc, char** argv)
         if (vnorm_location == -1) {
             spdlog::warn("Could not get location of vNormal");
         } else {
-            spdlog::info("add vnorm");
+            spdlog::trace("add vnorm");
             glEnableVertexAttribArray(vnorm_location);
-            spdlog::info("set vnorm data");
+            spdlog::trace("set vnorm data");
             glVertexAttribPointer(vnorm_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(float) * 5));
         }
 
-        spdlog::info("Create index/element buffer");
+        spdlog::trace("Create index/element buffer");
         glGenBuffers(1, &index_buffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glm::uvec3) * indices.size(), indices.data(), GL_STATIC_DRAW);
@@ -153,11 +201,11 @@ int main(int argc, char** argv)
         constexpr float NORMAL_LEN = 30.0f;
         std::vector<glm::vec3> debug_vertices;
         for (auto& v : vertices) {
-            spdlog::info("vertex: {{ pos {{{: >+#8.3f},{: >+#8.3f},{: >+#8.3f}}}, uv {{{: >+#8.3f},{: >+#8.3f}}}, normal {{{: >+#8.3f},{: >+#8.3f},{: >+#8.3f}}} }}", v.pos.x, v.pos.y, v.pos.z, v.uv.s, v.uv.t, v.normal.x, v.normal.y, v.normal.z);
+            spdlog::trace("vertex: {{ pos {{{: >+#8.3f},{: >+#8.3f},{: >+#8.3f}}}, uv {{{: >+#8.3f},{: >+#8.3f}}}, normal {{{: >+#8.3f},{: >+#8.3f},{: >+#8.3f}}} }}", v.pos.x, v.pos.y, v.pos.z, v.uv.s, v.uv.t, v.normal.x, v.normal.y, v.normal.z);
             auto normal = v.normal;
             auto pos = v.pos;
             auto end_pos = pos + normal * NORMAL_LEN;
-            spdlog::info("\tResulting normal line: ({: >+#8.3f},{: >+#8.3f},{: >+#8.3f}) -> ({: >+#8.3f},{: >+#8.3f},{: >+#8.3f})", pos.x, pos.y, pos.z, end_pos.x, end_pos.y, end_pos.z);
+            spdlog::trace("\tResulting normal line: ({: >+#8.3f},{: >+#8.3f},{: >+#8.3f}) -> ({: >+#8.3f},{: >+#8.3f},{: >+#8.3f})", pos.x, pos.y, pos.z, end_pos.x, end_pos.y, end_pos.z);
             debug_vertices.push_back(pos);
             debug_vertices.push_back(end_pos);
         }
@@ -171,9 +219,9 @@ int main(int argc, char** argv)
         if (vpos_location == -1) {
             spdlog::warn("Could not get location of vPos");
         } else {
-            spdlog::info("add vpos");
+            spdlog::trace("add vpos");
             glEnableVertexAttribArray(vpos_location);
-            spdlog::info("set vpos data");
+            spdlog::trace("set vpos data");
             glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
         }
 
@@ -215,7 +263,7 @@ int main(int argc, char** argv)
 
         glEnable(GL_DEPTH_TEST);
 
-        spdlog::info("Start drawing");
+        spdlog::trace("Start drawing");
         while (!glfwWindowShouldClose(window)) {
             int width, height;
             glfwGetFramebufferSize(window, &width, &height);
@@ -234,7 +282,7 @@ int main(int argc, char** argv)
             glm::mat4 model_view = view * m;
             mvp = p * model_view;
 
-            glm::mat4 inv_trans_model_view = glm::inverse(glm::transpose(model_view));
+            glm::mat4 inv_trans_model_view = glm::transpose(glm::inverse(model_view));
 
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             basic_shader.use();

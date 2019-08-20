@@ -4,6 +4,7 @@ project(OpenGlTest
     LANGUAGES CXX
 )
 
+find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(glfw3 3.3 REQUIRED)
 find_package(glm REQUIRED)
@@ -29,6 +30,7 @@ target_link_libraries(OpenGlTest
     glm
     spdlog::spdlog
     fmt::fmt
+    Threads::Threads
 )
 
 add_custom_command(TARGET OpenGlTest POST_BUILD

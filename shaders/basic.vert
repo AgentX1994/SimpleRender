@@ -15,5 +15,5 @@ void main()
     uv = vUv;
     normal = (inv_trans_model_view * vec4(vNormal, 0.0)).xyz;
     vec4 world_position_vec4 = model_view * vec4(vPos, 1.0);
-    world_position = (world_position_vec4).xyz/world_position_vec4.w;
+    world_position = (world_position_vec4).xyz;
 }

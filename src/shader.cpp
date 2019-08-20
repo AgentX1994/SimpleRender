@@ -52,7 +52,7 @@ ShaderProgram::ShaderProgram(
 
 ShaderProgram::~ShaderProgram()
 {
-    glDeleteShader(shader_program_id);
+    glDeleteProgram(shader_program_id);
     shader_program_id = 0;
 }
 
