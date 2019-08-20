@@ -9,3 +9,4 @@ This executable loads a "test.obj" file in the same directory, and renders it sp
 - [glfw3](https://www.glfw.org/)
 - [glm](https://glm.g-truc.net/0.9.9/index.html)
 - [spdlog](https://github.com/gabime/spdlog)
+- [fmt](https://github.com/fmtlib/fmt)
